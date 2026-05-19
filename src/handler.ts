@@ -1,4 +1,5 @@
 import { fetchPoolsWithAprs, hasMerklApr, sumNonMerklApr } from './balancer';
+import { config } from './config';
 import { fetchMerklOpportunities, MerklOpportunity } from './merkl';
 
 // Matches the chain strings returned by the Balancer API to Merkl chainIds
@@ -32,7 +33,11 @@ const TITLE = 'Balancer Pool APR';
 const DESCRIPTION =
     'Balancer protocol APR consists of swap fees, captured yield and additional rewards. See Balancer for details';
 
-export async function buildMerklAprResponse(): Promise<MerklNativeAprItem[]> {
+let cachedResponse: MerklNativeAprItem[] | null = null;
+let cacheExpiresAt = 0;
+let inFlightRefresh: Promise<MerklNativeAprItem[]> | null = null;
+
+async function computeMerklAprResponse(): Promise<MerklNativeAprItem[]> {
     const [pools, opportunities] = await Promise.all([fetchPoolsWithAprs(), fetchMerklOpportunities()]);
 
     // Only consider pools that have at least one Merkl APR item (i.e. Merkl tracks them)
@@ -70,4 +75,25 @@ export async function buildMerklAprResponse(): Promise<MerklNativeAprItem[]> {
     }
 
     return result;
+}
+
+export async function buildMerklAprResponse(): Promise<MerklNativeAprItem[]> {
+    const now = Date.now();
+    if (cachedResponse && now < cacheExpiresAt) {
+        return cachedResponse;
+    }
+
+    if (!inFlightRefresh) {
+        inFlightRefresh = computeMerklAprResponse()
+            .then((result) => {
+                cachedResponse = result;
+                cacheExpiresAt = Date.now() + config.responseCacheTtlMs;
+                return result;
+            })
+            .finally(() => {
+                inFlightRefresh = null;
+            });
+    }
+
+    return inFlightRefresh;
 }

@@ -34,7 +34,7 @@ const POOLS_QUERY = `
     poolGetPools(
       first: $first
       skip: $skip
-      where: { minTvl: 10 }
+      where: { minTvl: 50 }
     ) {
       id
       address

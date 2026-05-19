@@ -9,6 +9,8 @@ const app = express();
 app.get('/', async (_, res) => {
     try {
         const data = await buildMerklAprResponse();
+        const maxAgeSeconds = Math.max(0, Math.floor(config.responseCacheTtlMs / 1000));
+        res.set('Cache-Control', `public, max-age=${maxAgeSeconds}`);
         res.json(data);
     } catch (error) {
         console.error('Error building Merkl APR response:', error);
