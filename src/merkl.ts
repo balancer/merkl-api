@@ -19,6 +19,8 @@ export async function fetchMerklOpportunities(): Promise<MerklOpportunity[]> {
 
     if (config.merklApiKey) {
         headers['X-API-Key'] = config.merklApiKey;
+    }else{
+        console.error('Merkl API key is not set. Please set the MERKL_API_KEY environment variable to fetch opportunities.');
     }
 
     const response = await fetch(config.merklOpportunitiesUrl, { headers });
